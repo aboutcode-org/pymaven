@@ -278,7 +278,7 @@ class Pom(Artifact):
         dependencies = {}
 
         # we depend on our parent
-        if self.parent is not None:
+        if isinstance(self.parent, Pom):
             group = self.parent.group_id
             artifact = self.parent.artifact_id
             version = self.parent.version
@@ -305,7 +305,7 @@ class Pom(Artifact):
         dep_mgmt = {}
 
         # add parent's block first so we can override it
-        if self.parent is not None:
+        if isinstance(self.parent, Pom):
             dep_mgmt.update(self.parent.dependency_management)
 
         dep_mgmt.update(self._find_dependency_management())
@@ -329,8 +329,9 @@ class Pom(Artifact):
     def properties(self):
         properties = {}
 
-        if self.parent is not None:
+        if isinstance(self.parent, Pom):
             properties.update(self.parent.properties)
+        if isinstance(self.parent, Artifact):
             properties['parent.groupId'] = self.parent.group_id
             properties['parent.artifactId'] = self.parent.artifact_id
             properties['parent.version'] = str(self.parent.version)
