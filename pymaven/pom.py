@@ -355,24 +355,24 @@ class Pom(Artifact):
         if isinstance(self.parent, Artifact):
             properties['parent.groupId'] = self.parent.group_id
             properties['parent.artifactId'] = self.parent.artifact_id
-            properties['parent.version'] = str(self.parent.version)
+            properties['parent.version'] = self.parent.version and str(self.parent.version)
             properties['project.parent.groupId'] = self.parent.group_id
             properties['project.parent.artifactId'] = self.parent.artifact_id
-            properties['project.parent.version'] = str(self.parent.version)
+            properties['project.parent.version'] = self.parent.version and str(self.parent.version)
             properties['pom.parent.groupId'] = self.parent.group_id
             properties['pom.parent.artifactId'] = self.parent.artifact_id
-            properties['pom.parent.version'] = str(self.parent.version)
+            properties['pom.parent.version'] = self.parent.version and str(self.parent.version)
 
         # built-in properties
         properties['artifactId'] = self.artifact_id
         properties['groupId'] = self.group_id
-        properties['version'] = str(self.version)
+        properties['version'] = self.version and str(self.version)
         properties['project.artifactId'] = self.artifact_id
         properties['project.groupId'] = self.group_id
-        properties['project.version'] = str(self.version)
+        properties['project.version'] = self.version and str(self.version)
         properties['pom.artifactId'] = self.artifact_id
         properties['pom.groupId'] = self.group_id
-        properties['pom.version'] = str(self.version)
+        properties['pom.version'] = self.version and str(self.version)
 
         properties.update(self._find_properties())
         properties.update(self._find_prerequisites())
