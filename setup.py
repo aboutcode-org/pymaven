@@ -50,7 +50,7 @@ def read_file(filename):
 
 
 setup(
-    name="pymaven",
+    name="pymaven-patch",
     version=imp.load_source("pymaven.constants",
                             "pymaven/constants.py").get_version(),
     description="Python access to maven",
