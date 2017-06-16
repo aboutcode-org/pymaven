@@ -1,0 +1,16 @@
+graft tests
+graft recipes
+graft pymaven
+
+prune src/pymaven.egg-info
+
+include ContributorAgreement.txt
+include devreqs.txt
+include LICENSE
+include MANIFEST.in
+include README
+include requirements.txt
+include setup.cfg
+include setup.py
+
+global-exclude *.py[co] __pycache__ *.*~
