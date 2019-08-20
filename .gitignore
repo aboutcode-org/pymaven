@@ -58,3 +58,5 @@ target/
 # PBR
 AUTHORS
 ChangeLog
+/.pytest_cache/
+/tmp/
