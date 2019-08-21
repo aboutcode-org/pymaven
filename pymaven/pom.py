@@ -34,26 +34,32 @@ from .versioning import VersionRange
 
 EMPTY_POM = """\
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-          <modelVersion>4.0.0</modelVersion>
-          <groupId>{0.group_id}</groupId>
-          <artifactId>{0.artifact_id}</artifactId>
-          <version>{0.version}</version>
+<project>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>{0.group_id}</groupId>
+    <artifactId>{0.artifact_id}</artifactId>
+    <version>{0.version}</version>
 </project>
 """
-POM_NAMESPACE = "http://maven.apache.org/POM/4.0.0"
-POM = "{%s}" % (POM_NAMESPACE,)
-POM_NAMESPACE_LEN = len(POM)
+
 POM_PARSER = etree.XMLParser(
     recover=True,
     remove_comments=True,
     remove_pis=True,
-    )
+)
+
 PROPERTY_RE = re.compile(r'\$\{(.*?)\}')
-STRIP_NAMESPACE_RE = re.compile(POM)
+STRIP_NAMESPACE_RE = re.compile("<project(.|\\s)*?>", re.MULTILINE)
 
 log = logging.getLogger(__name__)
+
+
+def strip_namespace(xml_text):
+    """
+    Return `xml_text` stripping all namespace declaration from the root project
+    tag.
+    """
+    return STRIP_NAMESPACE_RE.sub('<project>', xml_text[xml_text.find('<project'):], count=1)
 
 
 class Pom(Artifact):
@@ -64,9 +70,16 @@ class Pom(Artifact):
 
     __slots__ = ("_client", "_parent", "_dep_mgmt", "_dependencies", "_pom_data", "_properties")
 
-    def __init__(self, coordinate, client=None, pom_data=None):
+    def __init__(self, coordinate, client=None, pom_data=None, ns_aware=False):
+        """Create a new Pom instance.
+        `coordinate` is a coordinate string using colon separator conventions
+        """
         if pom_data is not None:
-            pom_data = etree.fromstring(pom_data.encode("utf-8"), parser=POM_PARSER)
+            # remove all namespaces
+            pom_data = strip_namespace(pom_data)
+            if isinstance(pom_data, six.text_type):
+                pom_data = pom_data.encode("utf-8")
+            pom_data = etree.fromstring(pom_data, parser=POM_PARSER)
         self._pom_data = pom_data
         self._client = client
 
@@ -209,7 +222,7 @@ class Pom(Artifact):
         if prereqs is None:
             return properties
         for elem in prereqs:
-            tag = elem.tag[POM_NAMESPACE_LEN:]
+            tag = elem.tag
             properties['prerequisites.' + tag] = elem.text
             properties['project.prerequisites.' + tag] = elem.text
         return properties
@@ -258,11 +271,11 @@ class Pom(Artifact):
         project_properties = _find(elem, "properties")
         if project_properties is not None:
             for prop in project_properties.iterchildren():
-                if prop.tag == POM + 'property':
+                if prop.tag == 'property':
                     name = prop.get('name')
                     value = prop.get('value')
                 else:
-                    name = prop.tag[POM_NAMESPACE_LEN:]
+                    name = prop.tag
                     value = prop.text
                 properties[name] = value
         return properties
@@ -342,9 +355,9 @@ class Pom(Artifact):
         elif spec in ("latest.integration", "latest"):
             return str(artifacts[0].version)
 
-        range = VersionRange.fromstring(spec)
+        vrange = VersionRange.fromstring(spec)
         for artifact in artifacts:
-            if artifact.version in range:
+            if artifact.version in vrange:
                 return str(artifact.version)
 
     @property
@@ -399,10 +412,20 @@ class Pom(Artifact):
     @property
     @memoize("_pom_data")
     def pom_data(self):
+        """
+        Return an etree from the current POM data. If a client was provided at
+        creation time, use that client to fetch the POM artifact data remotely.
+        """
         if self._client is None:
             return etree.fromstring(EMPTY_POM.format(self), parser=POM_PARSER)
-        with self._client.get_artifact(self.coordinate).contents as fh:
-            return etree.parse(fh, parser=POM_PARSER)
+
+        contents = self._client.get_artifact(self.coordinate).contents
+        with contents as fh:
+            contents_text = fh.read()
+            if not isinstance(contents_text, six.text_type):
+                contents_text = contents_text.decode('utf-8')
+            contents_text = strip_namespace(contents_text)
+            return etree.fromstring(contents_text, parser=POM_PARSER)
 
     @property
     @memoize("_properties")
@@ -486,15 +509,12 @@ class Pom(Artifact):
 
 
 def _find(elem, tag):
-    tag = tag.replace("/", "/" + POM)
-    return elem.find(POM + tag)
+    return elem.find(tag)
 
 
 def _findall(elem, tag):
-    tag = tag.replace("/", "/" + POM)
-    return elem.findall(POM + tag)
+    return elem.findall(tag)
 
 
 def _findtext(elem, tag):
-    tag = tag.replace("/", "/" + POM)
-    return elem.findtext(POM + tag)
+    return elem.findtext(tag)
