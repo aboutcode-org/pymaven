@@ -44,8 +44,11 @@ EMPTY_POM = """\
 
 POM_PARSER = etree.XMLParser(
     recover=True,
-    remove_comments=True,
+    # we keep comments in case there is a license in the comments
+    remove_comments=False,
     remove_pis=True,
+    remove_blank_text=True,
+    resolve_entities=False
 )
 
 PROPERTY_RE = re.compile(r'\$\{(.*?)\}')
