@@ -47,6 +47,25 @@ class TestPom(unittest.TestCase):
         client.get_artifact.side_effect = side_effect
         return client
 
+    def test_fromstring_without_client(self):
+        """Test that a POM object can be created from a string without a client"""
+        pom = Pom.fromstring("foo:bar:1", FOO_BAR_1_POM)
+        assert pom.parent.group_id == "foo"
+        assert pom.parent.artifact_id == "parent"
+        assert pom.parent.version == "1"
+        assert pom.parent.properties["groupId"] == "foo"
+        assert pom.parent.properties["artifactId"] == "parent"
+        assert pom.parent.properties["version"] == "1"
+        assert pom.parent.properties["project.groupId"] == "foo"
+        assert pom.parent.properties["project.artifactId"] == "parent"
+        assert pom.parent.properties["project.version"] == "1"
+        assert pom.parent.properties["pom.groupId"] == "foo"
+        assert pom.parent.properties["pom.artifactId"] == "parent"
+        assert pom.parent.properties["pom.version"] == "1"
+        assert pom.properties["parent.groupId"] == "foo"
+        assert pom.properties["parent.artifactId"] == "parent"
+        assert pom.properties["parent.version"] == "1"
+
     def test_parent(self):
         """Test pom parent processing"""
         client = self._mock_client(FOO_PARENT_1_POM)

@@ -420,7 +420,8 @@ class Pom(Artifact):
         creation time, use that client to fetch the POM artifact data remotely.
         """
         if self._client is None:
-            return etree.fromstring(EMPTY_POM.format(self), parser=POM_PARSER)
+            _pom_data = EMPTY_POM.format(self)
+            return etree.fromstring(_pom_data.encode('utf-8'), parser=POM_PARSER)
 
         contents = self._client.get_artifact(self.coordinate).contents
         with contents as fh:
