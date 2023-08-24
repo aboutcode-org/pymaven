@@ -23,7 +23,12 @@ import itertools
 import logging
 import re
 
-from lxml import etree
+try:
+    from lxml import etree
+except ImportError:
+    from sanexml import etree
+    FALLBACK = True
+
 import six
 
 from .artifact import Artifact
@@ -42,14 +47,16 @@ EMPTY_POM = """\
 </project>
 """
 
-POM_PARSER = etree.XMLParser(
-    recover=True,
-    # we keep comments in case there is a license in the comments
-    remove_comments=False,
-    remove_pis=True,
-    remove_blank_text=True,
-    resolve_entities=False
-)
+
+def POM_PARSER():
+    return etree.XMLParser(
+        recover=True,
+        # we keep comments in case there is a license in the comments
+        remove_comments=False,
+        remove_pis=True,
+        remove_blank_text=True,
+        resolve_entities=False
+    )
 
 PROPERTY_RE = re.compile(r'\$\{(.*?)\}')
 STRIP_NAMESPACE_RE = re.compile("<project(.|\\s)*?>", re.MULTILINE)
@@ -79,10 +86,11 @@ class Pom(Artifact):
         """
         if pom_data is not None:
             # remove all namespaces
+            pom_data = pom_data.strip().strip("'").strip("\n'")
             pom_data = strip_namespace(pom_data)
             if isinstance(pom_data, six.text_type):
                 pom_data = pom_data.encode("utf-8")
-            pom_data = etree.fromstring(pom_data, parser=POM_PARSER)
+            pom_data = etree.fromstring(pom_data, parser=POM_PARSER())
         self._pom_data = pom_data
         self._client = client
 
@@ -273,7 +281,7 @@ class Pom(Artifact):
         properties = OrderedDict()
         project_properties = _find(elem, "properties")
         if project_properties is not None:
-            for prop in project_properties.iterchildren():
+            for prop in project_properties.iter():
                 if prop.tag == 'property':
                     name = prop.get('name')
                     value = prop.get('value')
@@ -421,7 +429,7 @@ class Pom(Artifact):
         """
         if self._client is None:
             _pom_data = EMPTY_POM.format(self)
-            return etree.fromstring(_pom_data.encode('utf-8'), parser=POM_PARSER)
+            return etree.fromstring(_pom_data.strip("'").strip("\n'").encode('utf-8'), parser=POM_PARSER())
 
         contents = self._client.get_artifact(self.coordinate).contents
         with contents as fh:
@@ -429,7 +437,7 @@ class Pom(Artifact):
             if not isinstance(contents_text, six.text_type):
                 contents_text = contents_text.decode('utf-8')
             contents_text = strip_namespace(contents_text)
-            return etree.fromstring(contents_text, parser=POM_PARSER)
+            return etree.fromstring(contents_text, parser=POM_PARSER())
 
     @property
     @memoize("_properties")
