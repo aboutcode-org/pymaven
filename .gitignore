@@ -60,3 +60,5 @@ AUTHORS
 ChangeLog
 /.pytest_cache/
 /tmp/
+/.python-version
+/venv/
